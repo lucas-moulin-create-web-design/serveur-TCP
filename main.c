@@ -16,13 +16,48 @@ int main(int argc, char *argv[]) {
     int nfds = 1; // le premier descripteur de fichier sera le socket d'écoute
 
     // Analyse des arguments en ligne de commande pour spécifié le port.
-    int port = PORT;
+    /*int port = PORT;
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) {
             port = atoi(argv[i+1]);
             i++;
         }
-    }
+    }*/
+    int stock = 5000;
+	int largeur = 80, hauteur = 40;
+	int pxmin = 10;
+	char str2[]="  ";
+	for(int i=1; i<argc-1;++i){
+		strcpy(str2, argv[i]);
+		if(str2[0]=='-' && str2[1]=='p'){
+			if(atoi(argv[i+1])>0){
+				stock = atoi(argv[i+1]);
+			} else{
+				printf("Erreur de port. -p <port>\tport € N*\n");
+			}
+		} else if(str2[0]=='-' && str2[1]=='s'){
+			if(atoi(argv[i+1]) == 0 || atoi(argv[i+2]) == 0){
+				printf("Erreur de dimention. -s <Largeur> <Hauteur>\t(Largeur,Hauteur) € (N*)²\n");
+			} else{
+				largeur = atoi(argv[i+1]);
+				hauteur = atoi(argv[i+2]);
+			}
+		} else if(str2[0]=='-' && str2[1]=='l'){
+			if(atoi(argv[i+1])>0){
+				pxmin = atoi(argv[i+1]);
+			}else{
+				printf("Erreur du nombre de pixel(s) par minute. -l <px/min>\t(Largeur,Hauteur) € (N*)²\n");
+			}
+		}
+	}
+	#define PORT stock
+    int port = PORT;
+	#define L largeur
+	#define H hauteur
+	#define pxMin pxmin
+	printf("Utilisation du port : %d\n", PORT);
+	printf("Dimensions : %d par %d\n", L, H);
+	printf("Pixels par minute : %d\n", pxMin);
 
     // Crée un socket de communication
     socketEcoute = socket(PF_INET, SOCK_STREAM, 0); /* 0 indique que l’on utilisera le protocole par défaut associé à SOCK_STREAM soit TCP */

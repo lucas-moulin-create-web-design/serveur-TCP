@@ -26,6 +26,12 @@ struct client {
     struct client *suivant;
 };
 
+typedef struct Matrix{
+    int R;
+    int G;
+    int B;
+};
+
 typedef struct client Client;
 
 //Prototype des fonctions :
@@ -33,6 +39,9 @@ typedef struct client Client;
 void ajouter_client(Client **liste_clients, int socketDialogue, struct sockaddr_in pointDeRencontreDistant);
 void supprimer_client(Client **liste_clients, int socketDialogue);
 void TEST_AFFICHAGE_LISTE(Client *liste_clients);
-void print_message_reçu(Client **liste_clients, int socketDialogue, char *messageRecu);
+void print_message_reçu(Client **liste_clients, int socketDialogue, char *messageRecu, Matrix mat[][H]);
+void reponse(Client *clients, int socketDialogue, char *messageRecu, Matrix mat[][H]);
+void sendMatrix(char *messageEnvoi, int socketDialogue, Matrix mat[][H]);
+int commande(char *tab);
 
 #endif

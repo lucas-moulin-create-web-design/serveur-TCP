@@ -62,8 +62,35 @@ void print_message_reçu(Client **liste_clients, int socketDialogue, char *messa
     while(client_courant != NULL) {
         if(client_courant->socketDialogue == socketDialogue) {
             printf("\nMessage reçu de %s:%d : %s\n", inet_ntoa(client_courant->pointDeRencontreDistant.sin_addr), ntohs(client_courant->pointDeRencontreDistant.sin_port), messageRecu);
+            reponse(client_courant, messageRecu);
             break;
         }
         client_courant = client_courant->suivant;
     }
 }
+
+void reponse(){
+    int msg = commande(messageRecu);
+    switch(msg){
+        case 1:
+            SendMat(messageEnvoi);
+            break;
+        case 2:
+            sprintf(messageEnvoi, "%dx%d\n", L, H);
+            break;
+        case 3:
+            sprintf(messageEnvoi, "%d\n", pxMin);
+            break;
+        case 4:
+            sprintf(messageEnvoi, "\"/getVersion\" n'est pas encore développée...\n");
+            break;
+        case 5:
+            sprintf(messageEnvoi, "\"/getWaitTime\" n'est pas encore développée...\n");
+            break;
+        case 0:
+            sprintf(messageEnvoi,"Commande invalide !\n");
+            break;
+    }
+    ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
+}
+

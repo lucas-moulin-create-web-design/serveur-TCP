@@ -57,7 +57,7 @@ void TEST_AFFICHAGE_LISTE(Client *liste_clients){
 
 /*Fonction permettant l'affichage du message reçu par le serveur en précisant l'adresse et le port source du client*/
 
-void print_message_reçu(Client **liste_clients, int socketDialogue, char *messageRecu){
+void print_message_reçu(Client **liste_clients, int socketDialogue, char *messageRecu, Matrix mat[][H]){
     Client *client_courant = *liste_clients;
     while(client_courant != NULL) {
         if(client_courant->socketDialogue == socketDialogue) {
@@ -69,28 +69,61 @@ void print_message_reçu(Client **liste_clients, int socketDialogue, char *messa
     }
 }
 
-void reponse(){
+void reponse(Client *clients, int socketDialogue, char *messageRecu, Matrix mat[][H]){
     int msg = commande(messageRecu);
     switch(msg){
         case 1:
-            SendMat(messageEnvoi);
+            SendMatrix(messageEnvoi, socketDialogue, mat);
             break;
         case 2:
             sprintf(messageEnvoi, "%dx%d\n", L, H);
+            ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 3:
             sprintf(messageEnvoi, "%d\n", pxMin);
+            ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 4:
             sprintf(messageEnvoi, "\"/getVersion\" n'est pas encore développée...\n");
+            ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 5:
             sprintf(messageEnvoi, "\"/getWaitTime\" n'est pas encore développée...\n");
+            ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 0:
             sprintf(messageEnvoi,"Commande invalide !\n");
+            ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
     }
-    ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
+}
+
+void sendMatrix(char *messageEnvoi, int socketDialogue, Matrix mat[][H]){
+    for(int h=0;h<H;++h){
+        for(int l=0;l<L;++l){
+            sprintf(messageEnvoi,"0x%x",mat[l][h].R);
+            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
+            sprintf(messageEnvoi,"0x%x",mat[l][h].G);
+            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
+            sprintf(messageEnvoi,"0x%x",mat[l][h].B);
+            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
+        }
+    }
+}
+
+int commande(char *tab){
+    if(strstr(tab, "/getMatrix")!=NULL){
+        return 1;
+    } else if(strstr(tab, "/getSize")!=NULL){
+        return 2;
+    } else if(strstr(tab, "/getLimits")!=NULL){
+        return 3;
+    } else if(strstr(tab, "/getVersion")!=NULL){
+        return 4;
+    } else if(strstr(tab, "/getWaitTime")!=NULL){
+        return 5;
+    } else{
+        return 0;
+    }
 }
 

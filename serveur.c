@@ -62,7 +62,7 @@ void print_message_reçu(Client **liste_clients, int socketDialogue, char *messa
     while(client_courant != NULL) {
         if(client_courant->socketDialogue == socketDialogue) {
             printf("\nMessage reçu de %s:%d : %s\n", inet_ntoa(client_courant->pointDeRencontreDistant.sin_addr), ntohs(client_courant->pointDeRencontreDistant.sin_port), messageRecu);
-            reponse(client_courant, messageRecu);
+            reponse(client_courant, socketDialogue, messageRecu, mat);
             break;
         }
         client_courant = client_courant->suivant;

@@ -31,6 +31,7 @@ typedef struct Matrix Matrix;
 typedef struct client Client;
 
 struct client {
+    time_t temps;
     int socketDialogue;
     struct sockaddr_in pointDeRencontreDistant; //Pour avoir l'IP et le port source.
     struct client *suivant;
@@ -62,8 +63,8 @@ int main(int argc, char *argv[]) {
     struct pollfd fds[MAX_CLIENTS + 1];
     int nfds = 1; // le premier descripteur de fichier sera le socket d'écoute
     int stock = 5000;
-	int largeur = 40;
-    int hauteur = 30;
+	int largeur = 8;
+    int hauteur = 6;
 	int pxmin = 10;
 	char str2[]="  ";
 	for(int i=1; i<argc-1;++i){
@@ -100,14 +101,11 @@ int main(int argc, char *argv[]) {
     Matrix mat[L][H];
     for(int l=0;l<L;l++){
         for(int h=0;h<H;h++){
-            mat[l][h].R=rand()%256;
-            mat[l][h].G=rand()%256;
-            mat[l][h].B=rand()%256;
+            mat[l][h].R=10*h;//rand()%256;
+            mat[l][h].G=10*h;//rand()%256;
+            mat[l][h].B=10*h;//rand()%256;
         }
     }
-    /*for(int i=0;i<64;++i){
-        printf("base64[%d] : %c\n", i, base64[i]);
-    }*/
     // Crée un socket de communication
     socketEcoute = socket(PF_INET, SOCK_STREAM, 0); /* 0 indique que l’on utilisera le protocole par défaut associé à SOCK_STREAM soit TCP */
 
@@ -284,6 +282,8 @@ void print_message_recu(Client **liste_clients, int socketDialogue, char *messag
 int reponse(Client *clients, int socketDialogue, char *messageEnvoi, char *messageRecu, Matrix mat[][H]){
     int msg = commande(messageRecu);
     int ecrits;
+    int ixe=0,igrec=0;
+    char stryng[4] = "AAAA";
     switch(msg){
         case 1:
             sendMatrix(messageEnvoi, socketDialogue, mat);
@@ -301,11 +301,52 @@ int reponse(Client *clients, int socketDialogue, char *messageEnvoi, char *messa
             ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 5:
-            sprintf(messageEnvoi, "\"/getWaitTime\" n'est pas encore développée...\n");
+            //sprintf(messageEnvoi, "Il reste %ld secondes\n", difftime(time()));
             ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
+        case 6:
+            /*sscanf(messageRecu,"/setPixel %dx%d %s", &ixe, &igrec, stryng);
+            mat[ixe][igrec].R=(stryng[0] << 2) | (stryng[1] >> 4);
+            printf("%d\n",mat[ixe][igrec].R);
+            mat[ixe][igrec].G=((stryng[1] & 0x0F) << 4) | (stryng[2] >> 2);
+            printf("%d\n",mat[ixe][igrec].G);
+            mat[ixe][igrec].B=((stryng[2] & 0x03) << 6) | stryng[3];
+            printf("%d\n",mat[ixe][igrec].B);*/
+            sscanf(messageRecu, "/setPixel %dx%d %c%c%c%c", &ixe, &igrec, &stryng[0], &stryng[1], &stryng[2], &stryng[3]);
+            //printf("%s, %d, %d\n",stryng, ixe,igrec);
+
+            // Convertir la base 64 en valeurs RGB
+            unsigned char decoded[4];
+            for (int i = 0; i < 4; i++) {
+              unsigned char c = stryng[i];
+              if (c >= 'A' && c <= 'Z') {c -= 'A';}
+              else if (c >= 'a' && c <= 'z') {c -= 'a' - 26;}
+              else if (c >= '0' && c <= '9') {c -= '0' - 52;}
+              else if (c == '+') {c = 62;}
+              else if (c == '/') {c = 63;}
+              else {
+                // Caractère invalide dans la base 64
+                // Gérer l'erreur ici
+              }
+              decoded[i] = c;
+              //printf("%d %c\n",i,c);
+            }
+
+            // Extraire les valeurs RGB de la base 64
+            mat[ixe][igrec].R = (decoded[0] << 2) | (decoded[1] >> 4);
+            mat[ixe][igrec].G = ((decoded[1] & 0x0F) << 4) | (decoded[2] >> 2);
+            mat[ixe][igrec].B = ((decoded[2] & 0x03) << 6) | decoded[3];
+            sprintf(messageEnvoi, "00\n");
+            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
+
+            // Afficher les valeurs RGB pour le débogage
+            //printf("r %d\n", mat[ixe][igrec].R);
+            //printf("g %d\n", mat[ixe][igrec].G);
+            //printf("b %d\n", mat[ixe][igrec].B);
+
+            break;
         case 0:
-            sprintf(messageEnvoi,"Commande invalide !\n");
+            sprintf(messageEnvoi,"10\n");
             ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
     }
@@ -313,18 +354,13 @@ int reponse(Client *clients, int socketDialogue, char *messageEnvoi, char *messa
 }
 
 void sendMatrix(char *messageEnvoi, int socketDialogue, Matrix mat[][H]){
-    //sprintf(messageEnvoi, "/getMatrix");
-    //write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
-    for(int h=0;h<H;++h){
-        for(int l=0;l<L;++l){
+    for(int l=0;l<L;++l){
+        for(int h=0;h<H;++h){
+            printf("[%d;%d;",l,h);
             testEnvoi(mat[l][h], messageEnvoi, socketDialogue);
-            /*sprintf(messageEnvoi,"0x%x|",mat[l][h].R);
-            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
-            sprintf(messageEnvoi,"0x%x|",mat[l][h].G);
-            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
-            sprintf(messageEnvoi,"0x%x\t[%d;%d]\n",mat[l][h].B, l, h);
-            write(socketDialogue, messageEnvoi, strlen(messageEnvoi));*/
+            printf("]");
         }
+        printf("\n");
     }
 }
 
@@ -339,6 +375,8 @@ int commande(char *tab){
         return 4;
     } else if(strstr(tab, "/getWaitTime")!=NULL){
         return 5;
+    } else if(strstr(tab, "/setPixel")!=NULL){
+        return 6;
     } else{
         return 0;
     }
@@ -350,7 +388,7 @@ void testEnvoi(Matrix mat, char *messageEnvoi, int socketDialogue){
     int c2 = (color>>12)&0x3F;
     int c3 = (color>>6)&0x3F;
     int c4 = (color)&0x3F;
-    printf("[color:%d][c1=%d:%c][c2=%d:%c][c3=%d:%c][c4=%d:%c]\n",color,c1,base64[c1],c2,base64[c2],c3,base64[c3],c4,base64[c4]);
     sprintf(messageEnvoi, "%c%c%c%c",base64[c1],base64[c2],base64[c3],base64[c4]);
+    printf("%s",messageEnvoi);
     write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
 }

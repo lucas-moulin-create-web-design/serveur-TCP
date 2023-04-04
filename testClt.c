@@ -23,7 +23,6 @@ struct Matrix{
 };
 typedef struct Matrix Matrix;
 
-int commande(char *tab);
 void afficherPanel(Matrix mat[][H]);
 void receveMatrix(Matrix mat[][H], int descripteurSocket, char messageRecu[]);
 void menu(Matrix mat[][H], char messageEnvoi[], int LL, int HH);
@@ -87,6 +86,15 @@ int main(){
         case 2:
             setPixel(messageEnvoi, messageRecu, descripteurSocket,L,H);
             break;
+        case 3:
+            setPixelMan(messageEnvoi,messageRecu,descripteurSocket,L,H);
+            break;
+        
+        case 4:
+            sprintf(messageEnvoi, "/getLimits");
+            write(descripteurSocket,messageEnvoi,strlen(messageEnvoi));
+            read(descripteurSocket,messageEnvoi,27*sizeof(char));
+            break;
         
         default:
             close(descripteurSocket);
@@ -110,22 +118,6 @@ int main(){
     }
 
     return 0;
-}
-
-int commande(char *tab){
-    if(strstr(tab, "/getMatrix")!=NULL){
-        return 1;
-    } else if(strstr(tab, "/getSize")!=NULL){
-        return 2;
-    } else if(strstr(tab, "/getLimits")!=NULL){
-        return 3;
-    } else if(strstr(tab, "/getVersion")!=NULL){
-        return 4;
-    } else if(strstr(tab, "/getWaitTime")!=NULL){
-        return 5;
-    } else{
-        return 0;
-    }
 }
 
 void afficherPanel(Matrix mat[][H]){
@@ -155,8 +147,6 @@ void receveMatrix(Matrix mat[][H], int descripteurSocket, char messageRecu[]){
             read(descripteurSocket, messageRecu, 4*sizeof(char));
             sscanf(messageRecu, "%c%c%c%c",&stryng[0], &stryng[1], &stryng[2], &stryng[3]);
             printf("%s\n",stryng);
-
-            // Convertir la base 64 en valeurs RGB
             unsigned char decoded[4];
             for (int i = 0; i < 4; i++) {
               unsigned char c = stryng[i];
@@ -165,21 +155,12 @@ void receveMatrix(Matrix mat[][H], int descripteurSocket, char messageRecu[]){
               else if (c >= '0' && c <= '9') {c -= '0' - 52;}
               else if (c == '+') {c = 62;}
               else if (c == '/') {c = 63;}
-              else {
-                // Caractère invalide dans la base 64
-                // Gérer l'erreur ici
-              }
               decoded[i] = c;
               printf("%d %c\n",i,c);
             }
-
-            // Extraire les valeurs RGB de la base 64
             mat[l][h].R = (decoded[0] << 2) | (decoded[1] >> 4);
             mat[l][h].G = ((decoded[1] & 0x0F) << 4) | (decoded[2] >> 2);
             mat[l][h].B = ((decoded[2] & 0x03) << 6) | decoded[3];
-            //mat[l][h].R=(messageRecu[0] << 2) | (messageRecu[1] >> 4);
-            //mat[l][h].G=((messageRecu[1] & 0x0F) << 4) | (messageRecu[2] >> 2);
-            //mat[l][h].B=((messageRecu[2] & 0x03) << 6) | messageRecu[3];
         }
     }
 }
@@ -191,7 +172,7 @@ void menu(Matrix mat[][H], char messageEnvoi[], int LL, int HH){
     for(int i=0;i<LL/2-1;++i){printf("===");}
     printf(" MENU ");
     for(int i=0;i<LL/2-1;++i){printf("===");}
-    printf("\n1. Actualiser la matrice\n2. Changer un pixel (guidé)\n3. Changer un Pixel : <ligne> <colonne> <rouge>;<vert>;<bleu>\n4. \n5. Version du protocol\nAutre. Quitter\n");
+    printf("\n1. Actualiser la matrice\n2. Changer un pixel (guidé)\n3. Changer un Pixel : <ligne> <colonne> <rouge>;<vert>;<bleu>\n4. Nombre de pixels restants\n5. Version du protocol\nAutre. Quitter\n");
     for(int i=0;i<LL;++i){printf("===");}
     printf("\nCommande : ");
 }
@@ -241,7 +222,7 @@ void setPixelMan(char messageEnvoi[], char messageRecu[], int descripteurSocket,
     while(1){
         printf("<ligne> <colonne> <rouge>;<vert>;<bleu>\n");
         scanf(" %s", str);
-        sscanf(str, "%d %d %d;%d;%d\0", &y,&x,&r,&g,&b);
+        sscanf(str, "%d;%d;%d;%d;%d\0", &y,&x,&r,&g,&b);
         if((x>=0&&x<=L-1)&&(y>=0&&y<=H-1)&&(r>=0&&r<=255)&&(g>=0&&g<=255)&&(b>=0&&b<=255)){break;}
     }
     int color = (r << 16) + (g << 8) + b;

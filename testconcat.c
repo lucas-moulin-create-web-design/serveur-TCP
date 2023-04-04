@@ -8,7 +8,7 @@
 #include <arpa/inet.h> /* pour htons et inet_aton */
 #include <sys/poll.h>
 #include <errno.h>
-#include<time.h>
+#include <time.h>
 
 int PORT = 5000;
 #define LG_MESSAGE 256
@@ -33,6 +33,7 @@ typedef struct client Client;
 struct client {
     time_t temps;
     int socketDialogue;
+    int pxmin;
     struct sockaddr_in pointDeRencontreDistant; //Pour avoir l'IP et le port source.
     struct client *suivant;
 } client;
@@ -46,6 +47,13 @@ void sendMatrix(char *messageEnvoi, int socketDialogue, Matrix mat[][H]);
 int commande(char *tab);
 
 void testEnvoi(Matrix mat, char *messageEnvoi, int socketDialogue);
+
+void rafraichissementTemps(Client *liste_clients){
+    while(liste_clients !=NULL){
+        liste_clients->pxmin = pxMin;
+        liste_clients=liste_clients->suivant;
+    }
+}
 
 int main(int argc, char *argv[]) {
     srand(time(NULL));
@@ -63,8 +71,8 @@ int main(int argc, char *argv[]) {
     struct pollfd fds[MAX_CLIENTS + 1];
     int nfds = 1; // le premier descripteur de fichier sera le socket d'écoute
     int stock = 5000;
-	int largeur = 8;
-    int hauteur = 6;
+	int largeur = 12;
+    int hauteur = 10;
 	int pxmin = 10;
 	char str2[]="  ";
 	for(int i=1; i<argc-1;++i){
@@ -149,6 +157,13 @@ int main(int argc, char *argv[]) {
     {
         memset(messageEnvoi, 0x00, LG_MESSAGE*sizeof(char));
         memset(messageRecu, 0x00, LG_MESSAGE*sizeof(char));
+        time_t start_time = time(NULL);
+        time_t current_time;
+        current_time = time(NULL);
+        if (current_time - start_time >= 60) {
+            rafraichissementTemps(liste_clients);
+            start_time = current_time;
+        }
         
          // Attends qu'un événement se produise sur un des descripteurs de fichier surveillés
 
@@ -222,6 +237,7 @@ void ajouter_client(Client **liste_clients, int socketDialogue, struct sockaddr_
     nouveau_client->socketDialogue = socketDialogue;
     nouveau_client->pointDeRencontreDistant = pointDeRencontreDistant;
     nouveau_client->suivant = *liste_clients;
+    nouveau_client->pxmin= pxMin;
     *liste_clients = nouveau_client;
     printf("\nNouveau client[%i] connecté : %s:%d\n", numero_client, inet_ntoa(pointDeRencontreDistant.sin_addr), ntohs(pointDeRencontreDistant.sin_port));
 }
@@ -293,7 +309,7 @@ int reponse(Client *clients, int socketDialogue, char *messageEnvoi, char *messa
             ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 3:
-            sprintf(messageEnvoi, "%d\n", pxMin);
+            sprintf(messageEnvoi, "%d et il vous en reste %d\n", pxMin, clients->pxmin);
             ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 4:
@@ -305,14 +321,13 @@ int reponse(Client *clients, int socketDialogue, char *messageEnvoi, char *messa
             ecrits = write(socketDialogue, messageEnvoi, strlen(messageEnvoi));
             break;
         case 6:
-            /*sscanf(messageRecu,"/setPixel %dx%d %s", &ixe, &igrec, stryng);
-            mat[ixe][igrec].R=(stryng[0] << 2) | (stryng[1] >> 4);
-            printf("%d\n",mat[ixe][igrec].R);
-            mat[ixe][igrec].G=((stryng[1] & 0x0F) << 4) | (stryng[2] >> 2);
-            printf("%d\n",mat[ixe][igrec].G);
-            mat[ixe][igrec].B=((stryng[2] & 0x03) << 6) | stryng[3];
-            printf("%d\n",mat[ixe][igrec].B);*/
             sscanf(messageRecu, "/setPixel %dx%d %c%c%c%c", &ixe, &igrec, &stryng[0], &stryng[1], &stryng[2], &stryng[3]);
+            if(clients->pxmin<=0){
+                sprintf(messageEnvoi,"Vous ne pouvez plus placer de pixels !");
+                write(socketDialogue,messageEnvoi,strlen(messageEnvoi));
+                break;
+            }
+            clients->pxmin--;
             //printf("%s, %d, %d\n",stryng, ixe,igrec);
 
             // Convertir la base 64 en valeurs RGB
